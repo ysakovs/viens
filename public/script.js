@@ -3,6 +3,8 @@ const socket = io('/');
 
 const conversation = document.querySelector('.conversation');
 
+let alreadyTyping = false;
+
 // change the number of online
 socket.on('numberOfOnline', size => {
     document.querySelector('.online').innerHTML = `${size.toLocaleString()} online now`
@@ -42,12 +44,26 @@ socket.on('chatStart', msg => {
 // event listener for form submit
 document.querySelector('.form').addEventListener('submit', e => {
     e.preventDefault();
-    // get the input
-    const input = document.querySelector('#text');
-    // emit the value of input to server
-    socket.emit('newMessageToServer', input.value);
-    // clear the value of input
-    input.value = '';
+    submitMessage();
+});
+
+// event listener when user press enter key
+document.querySelector('#text').onkeydown = e => {
+    // enter key is pressed without shift key
+    if(e.keyCode === 13 && !e.shiftKey) {
+        e.preventDefault();
+        submitMessage();
+    }
+}
+
+// event listener when user is typing
+document.querySelector('#text').addEventListener('input', () => {
+    if(!alreadyTyping) {
+        // emit message to server that a stranger is typing
+        socket.emit('typing', 'Stranger is typing...');
+
+        alreadyTyping = true;
+    }
 });
 
 // receive the message from server then add it to html
@@ -59,28 +75,44 @@ socket.on('newMessageToClient', data => {
             <span class="${notStranger ? 'name blue' : 'name red'}">${notStranger ? 'You: ' : 'Stranger: '} </span>
             <span class="text">${data.msg}</span>
         </div>
-    `
+    `;
+
+    // scroll to the bottom of the conversation
+    conversation.scrollTo(0, conversation.scrollHeight);
+});
+
+// message when someome is typing
+socket.on('strangerIsTyping', msg => {
+    // add the message to html
+    conversation.innerHTML += conversation.innerHTML = `<div class="message typing">${msg}</div>`;
+
+    // scroll conversation to bottom
+    conversation.scrollTo(0, conversation.scrollHeight);
+});
+
+// remove the Stranger is typing... message
+socket.on('strangerIsDoneTyping', () => {
+    document.querySelector('.typing').remove();
 });
 
 // message when someone disconnect
 socket.on('goodBye', msg => {
     conversation.innerHTML += `<div class="message">${msg}</div>`;
 
-    // add disabled attribute in textarea
-    document.querySelector('#text').disabled = true;
+    reset();
+});
 
-    // add disabled attribute in send button
-    document.querySelector('#send').disabled = true;
-
+// stop button
+document.querySelector('#stop').addEventListener('click', () => {
     // hide stop button
     document.querySelector('#stop').classList.add('hide');
 
-    // remove the hide class of start  button
-    document.querySelector('#start').classList.remove('hide');
+    // show really button
+    document.querySelector('#really').classList.remove('hide');
 });
 
-// end chat
-document.querySelector('#stop').addEventListener('click', () => {
+// really button
+document.querySelector('#really').addEventListener('click', () => {
     // stop conversation
     socket.emit('stop');
 });
@@ -89,32 +121,65 @@ document.querySelector('#stop').addEventListener('click', () => {
 socket.on('strangerDisconnected', msg => {
     conversation.innerHTML += `<div class="message">${msg}</div>`;
 
-     // remove the hide class of start  button
-     document.querySelector('#start').classList.remove('hide');
-
-     // hide stop button
-     document.querySelector('#stop').classList.add('hide');
-
-     // add disabled attribute in textarea
-    document.querySelector('#text').disabled = true;
-
-    // add disabled attribute in send button
-    document.querySelector('#send').disabled = true;
+    reset();
 });
 
 // display message when current user disconnect
 socket.on('endChat', msg => {
     conversation.innerHTML += `<div class="message">${msg}</div>`;
 
-     // remove the hide class of start  button
-     document.querySelector('#start').classList.remove('hide');
+    reset();
+});
 
-     // hide stop button
-     document.querySelector('#stop').classList.add('hide');
+function submitMessage() {
+    // get the input
+    const input = document.querySelector('#text');
 
-     // add disabled attribute in textarea
-    document.querySelector('#text').disabled = true;
+    // check if input is not an empty string
+    if(input.value !== '') {
+        // emit to server that the user is done typing
+        socket.emit('doneTyping');
+
+        // emit the value of input to server
+        socket.emit('newMessageToServer', input.value);
+
+        // clear the value of input
+        input.value = '';
+
+        // set alreadyTyping back to false
+        alreadyTyping = false;
+    }
+}
+
+function reset() {
+    // remove the hide class of start  button
+    document.querySelector('#start').classList.remove('hide');
+
+    // hide stop button
+    document.querySelector('#stop').classList.add('hide');
+
+    // hide really button
+    document.querySelector('#really').classList.add('hide');
+
+    const text = document.querySelector('#text');
+
+    // add disabled attribute in textarea
+    text.disabled = true;
+
+    text.value = '';
 
     // add disabled attribute in send button
     document.querySelector('#send').disabled = true;
-});
+
+    // remove Stranger is typing... message if exists
+    const typing = document.querySelector('.typing');
+
+    if(typing) {
+        typing.remove();
+    }
+
+    alreadyTyping = false;
+
+    // scroll conversation to bottom
+    conversation.scrollTo(0, conversation.scrollHeight);
+}
