@@ -57,8 +57,33 @@ document.querySelector('#text').onkeydown = e => {
 }
 
 // event listener when user is typing
-document.querySelector('#text').addEventListener('input', () => {
+document.querySelector('#text').addEventListener('input', e => {
     if(!alreadyTyping) {
+        // emit message to server that a stranger is typing
+        socket.emit('typing', 'Stranger is typing...');
+
+        alreadyTyping = true;
+    }
+
+    // check if user is not typing
+    if(e.target.value === '') {
+        socket.emit('doneTyping');
+
+        alreadyTyping = false;
+    }
+});
+
+// event listener when textarea is not focused
+document.querySelector('#text').addEventListener('blur', () => {
+    socket.emit('doneTyping');
+
+    alreadyTyping = false;
+});
+
+// event listener when textarea is clicked
+document.querySelector('#text').addEventListener('click', e => {
+    // check if value is not empty
+    if(e.target.value !== '') {
         // emit message to server that a stranger is typing
         socket.emit('typing', 'Stranger is typing...');
 
@@ -92,7 +117,11 @@ socket.on('strangerIsTyping', msg => {
 
 // remove the Stranger is typing... message
 socket.on('strangerIsDoneTyping', () => {
-    document.querySelector('.typing').remove();
+    const typing = document.querySelector('.typing');
+
+    if(typing) {
+        typing.remove();
+    }
 });
 
 // message when someone disconnect
@@ -136,7 +165,7 @@ function submitMessage() {
     const input = document.querySelector('#text');
 
     // check if input is not an empty string
-    if(input.value !== '') {
+    if(/\S/.test(input.value)) {
         // emit to server that the user is done typing
         socket.emit('doneTyping');
 
