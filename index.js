@@ -92,7 +92,18 @@ io.on('connection', async socket => {
         io.of('/').to(roomName).emit('newMessageToClient', {id: socket.id, msg});
     });
 
- 
+    //
+   socket.on('typing', msg => {
+
+        peer.emit('strangerIsTyping', msg);
+    });
+
+    socket.on('doneTyping', () => {
+
+        // emit message back to client
+        peer.emit('strangerIsDoneTyping');
+    });
+    //
 
     socket.on('stop', () => {
         // get room
