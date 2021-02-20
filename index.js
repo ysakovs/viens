@@ -92,39 +92,7 @@ io.on('connection', async socket => {
         io.of('/').to(roomName).emit('newMessageToClient', {id: socket.id, msg});
     });
 
-    socket.on('typing', msg => {
-        // get room
-        const roomName = [...socket.rooms][1];
-
-        // split ids
-        const ids = roomName.split('#');
-
-        // get peer id
-        const peerId = ids[0] === socket.id ? ids[1] : ids[0];
-
-        // get peer
-        const peer = notAvailable.find(user => user.id === peerId);
-
-        // emit message back to client
-        peer.emit('strangerIsTyping', msg);
-    });
-
-    socket.on('doneTyping', () => {
-        // get room
-        const roomName = [...socket.rooms][1];
-
-        // split ids
-        const ids = roomName.split('#');
-
-        // get peer id
-        const peerId = ids[0] === socket.id ? ids[1] : ids[0];
-
-        // get peer
-        const peer = notAvailable.find(user => user.id === peerId);
-
-        // emit message back to client
-        peer.emit('strangerIsDoneTyping');
-    });
+ 
 
     socket.on('stop', () => {
         // get room
